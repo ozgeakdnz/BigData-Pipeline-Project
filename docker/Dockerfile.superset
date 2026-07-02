@@ -1,0 +1,11 @@
+FROM apache/superset:4.0.2
+
+# Install PyHive for Spark ThriftServer / HiveServer2 connectivity
+USER root
+RUN pip install --no-cache-dir \
+    pyhive[hive]==0.7.0 \
+    thrift==0.20.0 \
+    thrift-sasl==0.4.3 \
+    sasl==0.3.1
+
+USER superset

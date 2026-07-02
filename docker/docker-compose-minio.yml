@@ -1,0 +1,55 @@
+version: '3.8'
+
+# MinIO Infrastructure for Olist Big Data Pipeline
+# API:     http://localhost:9000  (S3-compatible endpoint)
+# Console: http://localhost:9001  (Web UI — login: minioadmin / minioadmin)
+# Bucket:  olist-data
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    hostname: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - bigdata-net
+
+  # One-shot container that creates the bucket on first start
+  minio-setup:
+    image: minio/mc:latest
+    container_name: minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+        /usr/bin/mc mb myminio/olist-data --ignore-existing;
+        /usr/bin/mc anonymous set public myminio/olist-data;
+        echo 'Bucket olist-data is ready.';
+        exit 0;
+      "
+    networks:
+      - bigdata-net
+
+volumes:
+  minio_data:
+
+networks:
+  bigdata-net:
+    external: true
+    name: bigdata-net

@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Development environment container
+# Contains Python, PySpark, and all project dependencies.
+# Mount the project directory so you can edit locally and run inside the container.
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: olist-dev
+    hostname: olist-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - ../:/app                          # Mount entire project
+      - ~/.kaggle:/root/.kaggle:ro        # Kaggle credentials (read-only)
+    working_dir: /app
+    environment:
+      SPARK_MASTER: spark://spark-master:7077
+      PYTHONPATH: /app
+    networks:
+      - bigdata-net
+
+networks:
+  bigdata-net:
+    external: true
+    name: bigdata-net
