@@ -1,0 +1,18 @@
+# Used inside Airflow / Docker network.
+# For host runs, set host: localhost
+olist_spark:
+  target: thrift
+  outputs:
+    thrift:
+      type: spark
+      method: thrift
+      host: "{{ env_var('DBT_SPARK_HOST', 'spark-thriftserver') }}"
+      port: 10000
+      schema: olist_dbt
+      threads: 2
+      connect_retries: 5
+      connect_timeout: 60
+      retry_all: true
+      server_side_parameters:
+        "spark.driver.memory": "2g"
+        "spark.sql.shuffle.partitions": "4"

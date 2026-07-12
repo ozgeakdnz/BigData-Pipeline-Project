@@ -52,9 +52,13 @@ No advanced transformations are required for this phase.
 
 ---
 
-### 🔜 Phase 2 — Coming Soon
+### ✅ Phase 2 — Clean, star schema, business questions
 
-Details will be announced.
+Data quality, ELT star schema, and KPI answers — see `reports/REPORT.md` STUDY section.
+
+### ✅ Phase 3 — Airflow + dbt Medallion
+
+Orchestrate ingest with **Apache Airflow** and rebuild transforms as a **dbt** Medallion project (Bronze / Silver / Gold). See `reports/PHASE3.md`.
 
 ---
 
@@ -119,4 +123,28 @@ Architecture after transform:
 
 ```
 CSV → Spark → HDFS raw Parquet → Spark star (fact/dim) → Hive → Superset / SQL
+```
+
+---
+
+## Phase 3 — Airflow + dbt Medallion
+
+See full STUDY write-up: [`reports/PHASE3.md`](reports/PHASE3.md)
+
+```bash
+bash scripts/run_phase3.sh
+# Airflow UI: http://localhost:8089  (admin / admin)
+# Trigger DAG: olist_medallion_pipeline
+```
+
+| Piece | Path |
+|---|---|
+| Airflow compose | `docker/docker-compose-airflow.yml` |
+| DAG | `airflow/dags/olist_medallion_dag.py` |
+| dbt project (Bronze/Silver/Gold) | `dbt/` |
+| Phase 3 report | `reports/PHASE3.md` |
+
+```
+CSV → Spark Bronze (HDFS) → dbt Silver (clean) → dbt Gold (star) → Superset
+         ↑________________ Airflow DAG ________________↑
 ```

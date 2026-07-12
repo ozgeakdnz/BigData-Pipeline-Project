@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: dim_customer
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+
+  - name: dim_seller
+    columns:
+      - name: seller_id
+        tests: [unique, not_null]
+
+  - name: dim_product
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
+
+  - name: fact_sales
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: revenue
+        tests: [not_null]
+
+  - name: fact_orders
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+
+  - name: silver_geolocation
+    description: Deduped geolocation (full-row distinct)
+  - name: silver_order_reviews
+    description: Deduped reviews (review_id + one per order)

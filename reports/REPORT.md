@@ -278,3 +278,6 @@ python3 visualization/register_tables.py
 ```
 
 Superset URI (star): `hive://spark-thriftserver:10000/olist_star`
+
+# Phase 3
+See [`reports/PHASE3.md`](PHASE3.md) — Airflow orchestration + dbt Medallion (Bronze/Silver/Gold).

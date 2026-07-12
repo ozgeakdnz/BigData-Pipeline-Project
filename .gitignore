@@ -22,3 +22,9 @@ Thumbs.db
 *.crc
 _SUCCESS
 
+# Airflow / dbt
+airflow/logs/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
