@@ -1,30 +1,57 @@
 # Big Data Analytics Pipeline — Olist E-Commerce
 
-A hands-on big data project built around the
-[Olist Brazilian E-Commerce public dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) —
-~100,000 real orders from Brazil's largest online marketplace (2016–2018).
+> End-to-end analytics on Brazil's largest marketplace dataset — from raw CSV to orchestrated Medallion star schema and interactive dashboards.
 
-The pipeline is developed in **three phases**. Each phase adds orchestration, modeling, and analytics capability on top of the previous one.
+[![Phase 1](https://img.shields.io/badge/Phase%201-Ingest%20%26%20Visualize-success)](#-phase-1--ingest--visualize)
+[![Phase 2](https://img.shields.io/badge/Phase%202-Star%20Schema%20%26%20KPIs-blue)](#-phase-2--analytics--star-schema)
+[![Phase 3](https://img.shields.io/badge/Phase%203-Airflow%20%2B%20dbt-orange)](#-phase-3--orchestration--medallion)
 
-| Phase | Focus | Status |
-|---|---|---|
-| **Phase 1** | Ingest CSV → Spark → HDFS Parquet → Superset charts | ✅ Done |
-| **Phase 2** | Data quality, ELT star schema, business KPIs | ✅ Done |
-| **Phase 3** | Airflow orchestration + dbt Medallion (Bronze / Silver / Gold) | ✅ Done |
+**Dataset:** [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) · ~100k orders · 9 CSV tables · 2016–2018
 
 ---
 
-## 📌 Submission
+## Technologies
 
-Fork this repository, implement your solution, and submit by opening a **Pull Request** back to the upstream repository. PRs are the only accepted submission method.
+| Layer | Stack |
+|---|---|
+| **Languages** | Python 3 · SQL |
+| **Processing** | Apache Spark 3.3 · PySpark · Parquet |
+| **Storage** | HDFS · Hive Metastore · ThriftServer |
+| **Transform** | dbt-spark · Spark SQL · pandas |
+| **Orchestration** | Apache Airflow 2.9 · BashOperator · LocalExecutor |
+| **Visualization** | Apache Superset · Hive connector |
+| **Infrastructure** | Docker Compose · PostgreSQL |
+| **Data source** | Kaggle (kagglehub) |
 
-Docker Compose files in this repo are a **reference setup**. You may run HDFS, Spark, Superset, and Airflow however you prefer, as long as the pipeline works end-to-end.
+---
+
+## Overview
+
+The pipeline grows in three phases — each layer builds on the previous one:
+
+| Phase | What we built | Status |
+|---|---|:---:|
+| **1 — Ingest & Visualize** | CSV → Spark → HDFS Parquet → Superset charts | ✅ |
+| **2 — Building Data Pipeline** | Data quality, ELT star schema, 7 business KPIs | ✅ |
+| **3 — Re-Construct** | Airflow orchestration + dbt Medallion (Bronze/Silver/Gold) | ✅ |
+
+```
+                         ┌──────────────────────────────────────┐
+                         │     Phase 3 — Airflow DAG            │
+                         │  download → ingest → dbt → test      │
+                         └──────────────────┬───────────────────┘
+                                            │
+[9 CSV files] ──► Spark ──► [HDFS /olist/] ──► dbt Bronze → Silver → Gold
+                                    │                    │
+                                    ▼                    ▼
+                          Hive ThriftServer        Superset dashboards
+                                    │                    │
+                                    └──── SQL / KPIs ────┘
+```
 
 ---
 
 ## Dataset
-
-Nine CSV tables from Kaggle (~100k orders):
 
 | File | ~Rows | Description |
 |---|---:|---|
@@ -36,104 +63,91 @@ Nine CSV tables from Kaggle (~100k orders):
 | `olist_sellers_dataset.csv` | 3k | Seller city, state, zip |
 | `olist_products_dataset.csv` | 33k | Category, dimensions, weight |
 | `olist_geolocation_dataset.csv` | 1M | ZIP code → lat/lng |
-| `product_category_name_translation.csv` | 71 | Portuguese → English category names |
-
-Download:
+| `product_category_name_translation.csv` | 71 | PT → EN category names |
 
 ```bash
-python scripts/download_dataset.py
+python scripts/download_dataset.py   # → data/raw/ (gitignored)
 ```
-
-Files land in `data/raw/` (gitignored).
 
 ---
 
-## End-to-end architecture
+## Screenshots
 
-```
-                         ┌─────────────────────────────────────────┐
-                         │           Phase 3 — Airflow DAG          │
-                         │  download → Spark ingest → Hive reg    │
-                         │           → dbt run → dbt test           │
-                         └────────────────────┬────────────────────┘
-                                              │
-[9 CSV files]                                 ▼
-     │                              ┌─────────────────┐
-     │  Spark (analysis.py)         │  Apache Airflow  │  :8089
-     ▼                              └─────────────────┘
-[HDFS /olist/]  ← Bronze landing (raw Parquet)
-     │
-     │  dbt Bronze → Silver → Gold
-     ▼
-┌────────────┬────────────┬────────────┐
-│  bronze    │   silver   │    gold    │
-│  (raw 1:1) │  (cleaned) │ (star dim/ │
-│            │            │   fact)    │
-└────────────┴────────────┴────────────┘
-     │                              │
-     ▼                              ▼
-[Hive ThriftServer :10000]    [Superset :8088]
-     │                              │
-     └────────── BI / SQL KPIs ──────┘
+### Phase 1 — Superset
+
+| Monthly orders | Payment type distribution |
+|:---:|:---:|
+| ![Monthly orders](reports/screenshots/monthly-orders-2026-07-12T22-46-47.184Z.jpg) | ![Payment types](reports/screenshots/payment-type-distribution-2026-07-12T22-46-50.967Z.jpg) |
+
+| Customers by state | Average review score |
+|:---:|:---:|
+| ![Customers by state](reports/screenshots/customers-by-state-2026-07-12T22-46-44.234Z.jpg) | ![Avg review score](reports/screenshots/average-review-score-2026-07-12T22-46-41.032Z.jpg) |
+
+### Phase 3 — Airflow
+
+![Airflow DAG — olist_medallion_pipeline](reports/screenshots/airflow-olist-medallion-graph.png)
+
+---
+
+## Quick start
+
+```bash
+bash scripts/setup_network.sh
+
+# Phase 1 + 2 (ingest, star schema, KPIs, Superset)
+bash scripts/run_pipeline.sh
+
+# Phase 3 (adds Airflow + dbt Medallion)
+bash scripts/run_phase3.sh
+# → http://localhost:8089 → trigger: olist_medallion_pipeline
 ```
 
-**Tech stack:** Apache Spark · HDFS · Hive ThriftServer · Apache Superset · Apache Airflow · dbt-spark
+### Service URLs
+
+| Service | URL | Login |
+|---|---|---|
+| **Superset** | http://localhost:8088 | admin / admin |
+| **Airflow** | http://localhost:8089 | admin / admin |
+| Spark Master | http://localhost:8080 | — |
+| HDFS NameNode | http://localhost:9870 | — |
+| Hive ThriftServer | localhost:10000 | — |
+
+### Superset Hive URIs
+
+| Layer | URI |
+|---|---|
+| Raw (Phase 1) | `hive://spark-thriftserver:10000/olist` |
+| Star (Phase 2) | `hive://spark-thriftserver:10000/olist_star` |
+| Gold (Phase 3) | `hive://spark-thriftserver:10000/gold` |
+
+> If the table picker shows wrong names, use **SQL Lab**: `SELECT * FROM olist.orders LIMIT 1000` → Save dataset.
 
 ---
 
 ## Phase 1 — Ingest & Visualize
 
-**Goal:** Download the dataset, load CSVs into HDFS as Parquet via Spark, connect Superset, and build simple charts.
+**Goal:** Load all CSVs into HDFS as Parquet and build simple Superset charts.
 
-### What we built
+| Component | Path |
+|---|---|
+| Download | `scripts/download_dataset.py` |
+| Spark ingest | `processing/analysis.py` |
+| Hive register | `visualization/register_tables.py` |
+| One-command run | `scripts/run_pipeline.sh` |
 
-| Component | Path | Role |
+**Charts built**
+
+| Chart | Table | Metric × Dimension |
 |---|---|---|
-| Dataset download | `scripts/download_dataset.py` | Kaggle → `data/raw/` via kagglehub |
-| Spark ingest | `processing/analysis.py` | CSV → Parquet on `hdfs://namenode:9000/olist/` |
-| Hive registration | `visualization/register_tables.py` | Register raw tables in Hive schema `olist` |
-| One-command run | `scripts/run_pipeline.sh` | Full Phase 1 stack end-to-end |
+| Monthly orders | `orders` | COUNT(order_id) × month |
+| Payment distribution | `order_payments` | SUM/COUNT × payment_type |
+| Customers by state | `customers` | COUNT × customer_state |
+| Avg review score | `order_reviews` | AVG(review_score) |
 
-### Superset connection
-
-1. Open http://localhost:8088 → `admin` / `admin`
-2. **Settings → Database Connections → + Database → Hive**
-3. URI: `hive://spark-thriftserver:10000/olist`
-4. Create datasets via **SQL Lab** (e.g. `SELECT * FROM olist.orders LIMIT 1000` → Save dataset)
-
-> **Note:** Superset may list table names incorrectly for Spark Hive (`olist` instead of `orders`). Use SQL Lab with fully qualified names (`olist.orders`).
-
-### Charts created
-
-| Chart | Dataset | Metric × Dimension |
-|---|---|---|
-| Monthly orders | `orders` | COUNT(order_id) × order_purchase_timestamp (month) |
-| Payment type distribution | `order_payments` | SUM/COUNT × payment_type |
-| Customers by state | `customers` | COUNT(customer_id) × customer_state |
-| Average review score | `order_reviews` | AVG(review_score) |
-
-### Screenshots (Phase 1 — Superset)
-
-**Monthly orders**
-
-![Monthly orders](reports/screenshots/monthly-orders-2026-07-12T22-46-47.184Z.jpg)
-
-**Payment type distribution**
-
-![Payment type distribution](reports/screenshots/payment-type-distribution-2026-07-12T22-46-50.967Z.jpg)
-
-**Customers by state**
-
-![Customers by state](reports/screenshots/customers-by-state-2026-07-12T22-46-44.234Z.jpg)
-
-**Average review score**
-
-![Average review score](reports/screenshots/average-review-score-2026-07-12T22-46-41.032Z.jpg)
-
-### Run Phase 1
+<details>
+<summary><b>Manual run commands</b></summary>
 
 ```bash
-bash scripts/setup_network.sh
 docker compose -f docker/docker-compose-hdfs.yml up -d
 docker compose -f docker/docker-compose-spark.yml up -d
 docker compose -f docker/docker-compose-superset.yml up -d
@@ -146,35 +160,33 @@ docker exec -e CSV_DIR=/app/data/raw spark-master /spark/bin/spark-submit \
 python visualization/register_tables.py
 ```
 
-Or: `bash scripts/run_pipeline.sh`
+</details>
 
 ---
 
-## Phase 2 — Building Data Pipeline (STUDY)
+## Phase 2 — Analytics & Star Schema
 
-**Goal:** Assess data quality, deduplicate dirty tables, build a star schema (ELT), and answer seven business questions with Python and SQL.
+**Goal:** Clean data, build a star schema (ELT), answer seven business questions.
 
-Full write-up: [`reports/REPORT.md`](reports/REPORT.md) (STUDY section)
+📄 Full STUDY → [`reports/REPORT.md`](reports/REPORT.md)
 
 ### Data quality & deduplication
 
 | Finding | Action |
 |---|---|
-| Core PKs (orders, items, payments, customers…) unique | Keep as-is |
-| `geolocation` ~261k full-row duplicates | `dropDuplicates()` |
-| `order_reviews` ~814 duplicate `review_id` | Dedupe by `review_id`; one review per order |
-| Null delivery timestamps (~3%) | Exclude from delivery-time KPIs |
+| Core PKs unique (orders, items, payments…) | Keep |
+| `geolocation` ~261k duplicate rows | `dropDuplicates()` |
+| `order_reviews` ~814 dup `review_id` | Dedupe; one review per order |
+| Null delivery dates (~3%) | Filter for delivery KPIs |
 
-Reports: [`reports/data_quality.md`](reports/data_quality.md) · Script: `processing/data_quality.py`
+Report → [`reports/data_quality.md`](reports/data_quality.md) · Script → `processing/data_quality.py`
 
 ### ELT approach
 
-1. **Extract / Load** — CSV → Spark → raw Parquet on HDFS (`processing/analysis.py`)
+1. **Extract / Load** — CSV → Spark → raw Parquet (`processing/analysis.py`)
 2. **Transform** — Clean + star schema on HDFS (`processing/build_star_schema.py`)
 
-Why **ELT:** raw data stays reproducible; transforms are iterative and versioned in code.
-
-### Star schema (Spark — `olist_star`)
+### Star schema
 
 ```
                  dim_date
@@ -188,30 +200,29 @@ Why **ELT:** raw data stays reproducible; transforms are iterative and versioned
    dim_date     ─ fact_reviews
 ```
 
-| Layer | Hive schema | Tables |
-|---|---|---|
-| Raw | `olist` | 9 source tables |
-| Star | `olist_star` | 5 dims + 4 facts |
+| Hive schema | Content |
+|---|---|
+| `olist` | 9 raw tables |
+| `olist_star` | 5 dimensions + 4 facts |
 
-### Business questions answered
+### Business questions
 
-| Question | Fact | Dimensions |
+| Question | Fact | Dimension |
 |---|---|---|
 | Monthly revenue | `fact_sales` | `dim_date` |
-| Revenue by product category | `fact_sales` | `dim_product` |
-| Top-performing sellers | `fact_sales` | `dim_seller` |
+| Revenue by category | `fact_sales` | `dim_product` |
+| Top sellers | `fact_sales` | `dim_seller` |
 | Sales by customer state | `fact_sales` | `dim_customer` |
-| Average delivery time by state | `fact_orders` | `dim_customer` |
-| Payment method trends | `fact_payments` | `dim_date` + payment_type |
-| Average review score by category | `fact_reviews` | `dim_product` |
+| Avg delivery time by state | `fact_orders` | `dim_customer` |
+| Payment method trends | `fact_payments` | `dim_date` |
+| Avg review score by category | `fact_reviews` | `dim_product` |
 
-Answers: [`reports/business_answers.md`](reports/business_answers.md)  
-SQL: [`sql/business_questions.sql`](sql/business_questions.sql)  
-Python: `processing/business_questions.py`
+**Sample results:** total revenue **~15.8M BRL** · top state **SP** · top category **health_beauty**
 
-Example result: **total revenue ~15.8M BRL**; top state **SP**; top category **health_beauty**.
+→ [`business_answers.md`](reports/business_answers.md) · [`sql/business_questions.sql`](sql/business_questions.sql) · `processing/business_questions.py`
 
-### Run Phase 2 transforms
+<details>
+<summary><b>Run Phase 2 transforms</b></summary>
 
 ```bash
 docker exec spark-master /spark/bin/spark-submit \
@@ -224,81 +235,62 @@ python processing/business_questions.py
 python visualization/register_tables.py
 ```
 
-Superset (star layer): `hive://spark-thriftserver:10000/olist_star`
+</details>
 
 ---
 
-## Phase 3 — Re-Construct: Airflow + dbt Medallion
+## Phase 3 — Orchestration & Medallion
 
-**Goal:** Orchestrate the pipeline with **Apache Airflow** and rebuild the star schema as a **dbt** project using **Medallion Architecture** (Bronze → Silver → Gold).
+**Goal:** Automate the pipeline with **Airflow**; rebuild star schema in **dbt** as Bronze → Silver → Gold.
 
-Full STUDY write-up: [`reports/PHASE3.md`](reports/PHASE3.md)
+📄 Full STUDY → [`reports/PHASE3.md`](reports/PHASE3.md)
 
 ### Airflow DAG — `olist_medallion_pipeline`
 
 ```
 download_dataset
        ↓
-spark_ingest_bronze        ← Spark: CSV → HDFS Parquet
+spark_ingest_bronze
        ↓
-register_raw_hive_tables   ← Hive schema `olist`
+register_raw_hive_tables
        ↓
-dbt_run_medallion          ← Bronze / Silver / Gold models
+dbt_run_medallion
        ↓
-dbt_test                   ← unique, not_null tests on gold
+dbt_test
 ```
 
-| Task | Operator | Boundary |
+| Task | Operator | Runs on |
 |---|---|---|
-| `download_dataset` | BashOperator | Host scripts / mounted volume |
+| `download_dataset` | BashOperator | Host / mounted volume |
 | `spark_ingest_bronze` | BashOperator → `docker exec spark-submit` | Spark cluster |
 | `register_raw_hive_tables` | BashOperator → Python | Hive ThriftServer |
-| `dbt_run_medallion` | BashOperator → `dbt run` | Thrift SQL warehouse |
-| `dbt_test` | BashOperator → `dbt test` | Thrift SQL warehouse |
+| `dbt_run_medallion` | BashOperator → `dbt run` | Thrift SQL |
+| `dbt_test` | BashOperator → `dbt test` | Thrift SQL |
 
-Schedule: `@daily` · UI: http://localhost:8089 (`admin` / `admin`)
+Schedule: `@daily` · Retries: 1 · UI: http://localhost:8089
 
 ### dbt Medallion layers
 
-| Layer | Hive schema | Purpose | Example models |
+| Layer | Schema | Role | Examples |
 |---|---|---|---|
-| **Bronze** | `bronze` | 1:1 copy of raw sources | `bronze_orders`, `bronze_geolocation` |
-| **Silver** | `silver` | Clean, typed, deduped | `silver_orders` (delivery_days), `silver_geolocation` (distinct), `silver_order_reviews` (deduped) |
-| **Gold** | `gold` | Star schema for BI | `dim_*`, `fact_sales`, `fact_orders`, `fact_payments`, `fact_reviews` |
+| **Bronze** | `bronze` | Raw 1:1 landing | `orders`, `geolocation` |
+| **Silver** | `silver` | Clean, typed, deduped | `silver_orders`, `silver_geolocation` |
+| **Gold** | `gold` | Star schema for BI | `dim_*`, `fact_sales`, `fact_orders` |
 
-dbt project: `dbt/` · DAG: `airflow/dags/olist_medallion_dag.py`
+dbt project → `dbt/models/` · DAG → `airflow/dags/olist_medallion_dag.py`
 
-Superset (gold layer): `hive://spark-thriftserver:10000/gold`
-
-### Screenshot (Phase 3 — Airflow DAG graph)
-
-![Airflow olist_medallion_pipeline DAG](reports/screenshots/airflow-olist-medallion-graph.png)
-
-### Run Phase 3
+<details>
+<summary><b>Run Phase 3 / manual dbt</b></summary>
 
 ```bash
 bash scripts/run_phase3.sh
-# Open http://localhost:8089 → trigger DAG: olist_medallion_pipeline
-```
 
-Manual dbt (after ingest):
-
-```bash
+# Or run dbt inside Airflow container:
 docker exec -e DBT_SPARK_HOST=spark-thriftserver airflow-scheduler \
   bash -c 'cd /opt/airflow/dbt && dbt run --profiles-dir /opt/airflow/dbt && dbt test --profiles-dir /opt/airflow/dbt'
 ```
 
----
-
-## Service URLs
-
-| Service | URL | Credentials |
-|---|---|---|
-| HDFS NameNode | http://localhost:9870 | — |
-| Spark Master | http://localhost:8080 | — |
-| Spark ThriftServer | localhost:10000 | — |
-| Superset | http://localhost:8088 | admin / admin |
-| Airflow | http://localhost:8089 | admin / admin |
+</details>
 
 ---
 
@@ -306,52 +298,43 @@ docker exec -e DBT_SPARK_HOST=spark-thriftserver airflow-scheduler \
 
 ```
 BigData-Pipeline-Project/
-├── airflow/
-│   └── dags/olist_medallion_dag.py    # Phase 3 orchestration
-├── dbt/
-│   └── models/
-│       ├── bronze/                     # Raw 1:1 models
-│       ├── silver/                     # Cleaned / typed
-│       └── gold/                       # Star schema (dim + fact)
-├── docker/
-│   ├── docker-compose-hdfs.yml
-│   ├── docker-compose-spark.yml
-│   ├── docker-compose-superset.yml
-│   └── docker-compose-airflow.yml      # Phase 3
+├── airflow/dags/           Phase 3 — Airflow DAG
+├── dbt/models/
+│   ├── bronze/             Raw 1:1 models
+│   ├── silver/             Cleaned / typed
+│   └── gold/               Star schema (dim + fact)
+├── docker/                 HDFS · Spark · Superset · Airflow
 ├── processing/
-│   ├── analysis.py                     # Phase 1: CSV → Parquet
-│   ├── build_star_schema.py            # Phase 2: Spark star schema
-│   ├── data_quality.py                 # Phase 2: quality report
-│   └── business_questions.py           # Phase 2: KPI answers
-├── scripts/
-│   ├── download_dataset.py
-│   ├── run_pipeline.sh                 # Phase 1 + 2 end-to-end
-│   └── run_phase3.sh                   # Phase 3 stack
-├── sql/business_questions.sql          # Phase 2 KPI SQL
-├── visualization/register_tables.py    # Hive table registration
+│   ├── analysis.py         Phase 1 ingest
+│   ├── build_star_schema.py Phase 2 star (Spark)
+│   ├── data_quality.py     Quality report
+│   └── business_questions.py  KPI answers
+├── scripts/                run_pipeline.sh · run_phase3.sh
+├── sql/                    business_questions.sql
+├── visualization/          Hive table registration
 └── reports/
-    ├── REPORT.md                       # Phase 1 + Phase 2 STUDY
-    ├── PHASE3.md                       # Phase 3 STUDY
+    ├── REPORT.md           Phase 1 + 2 STUDY
+    ├── PHASE3.md           Phase 3 STUDY
     ├── data_quality.md
     ├── business_answers.md
-    └── screenshots/                    # Superset + Airflow captures
+    └── screenshots/        Superset + Airflow captures
 ```
 
 ---
 
 ## Reports & deliverables
 
-| Document | Content |
+| Document | What's inside |
 |---|---|
-| [`reports/REPORT.md`](reports/REPORT.md) | Phase 1 steps + Phase 2 STUDY (clean data, ELT, dbt intro, layers, star schema) |
-| [`reports/PHASE3.md`](reports/PHASE3.md) | Phase 3 STUDY (Airflow components, DAG walk-through, Medallion, challenges) |
-| [`reports/data_quality.md`](reports/data_quality.md) | Duplicate analysis and dedupe proof |
-| [`reports/business_answers.md`](reports/business_answers.md) | Seven business question results |
+| [`reports/REPORT.md`](reports/REPORT.md) | Phase 1 steps + Phase 2 STUDY (clean data, ELT, layers, star schema) |
+| [`reports/PHASE3.md`](reports/PHASE3.md) | Airflow components, DAG walk-through, Medallion benefits, challenges |
+| [`reports/data_quality.md`](reports/data_quality.md) | Duplicate analysis + dedupe proof |
+| [`reports/business_answers.md`](reports/business_answers.md) | 7 business question results |
 | [`reports/screenshots/`](reports/screenshots/) | Superset charts + Airflow DAG graph |
 
 ---
 
-## Stop all services
+## Stop services
 
 ```bash
 docker compose -f docker/docker-compose-airflow.yml down
@@ -362,6 +345,12 @@ docker compose -f docker/docker-compose-hdfs.yml down
 
 ---
 
-## Author
+## Submission
 
-Implemented as part of the Big Data Analytics Pipeline course — Olist E-Commerce project (Phases 1–3).
+Fork this repository → implement → open a **Pull Request** to the upstream repo. PRs are the only accepted submission method.
+
+Docker Compose files are a reference setup — you may run components however you prefer as long as the pipeline works end-to-end.
+
+---
+
+*Big Data Analytics Pipeline — Olist E-Commerce · Phases 1–3*
