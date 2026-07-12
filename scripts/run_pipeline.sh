@@ -23,11 +23,23 @@ docker exec -e CSV_DIR=/app/data/raw spark-master /spark/bin/spark-submit \
   /app/processing/analysis.py
 
 echo ""
-echo "=== Step 4: Register Hive tables ==="
+echo "=== Step 4: Clean + star schema (Spark ELT) ==="
+docker exec spark-master /spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --conf spark.hadoop.fs.defaultFS=hdfs://namenode:9000 \
+  /app/processing/build_star_schema.py
+
+echo ""
+echo "=== Step 5: Register Hive tables (raw + star) ==="
 python3 visualization/register_tables.py
 
 echo ""
-echo "=== Step 5: Start Superset ==="
+echo "=== Step 6: Data quality + business questions ==="
+python3 processing/data_quality.py
+python3 processing/business_questions.py
+
+echo ""
+echo "=== Step 7: Start Superset ==="
 docker compose -f docker/docker-compose-superset.yml up -d --build
 
 echo ""
@@ -35,4 +47,7 @@ echo "✅ Pipeline complete!"
 echo "   HDFS UI  : http://localhost:9870"
 echo "   Spark UI : http://localhost:8080"
 echo "   Superset : http://localhost:8088  (admin / admin)"
-echo "   DB URI   : hive://spark-thriftserver:10000/olist"
+echo "   DB URI   : hive://spark-thriftserver:10000/olist_star"
+echo "   Answers  : reports/business_answers.md"
+echo "   Quality  : reports/data_quality.md"
+echo "   SQL      : sql/business_questions.sql"

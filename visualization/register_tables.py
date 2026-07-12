@@ -1,16 +1,15 @@
 """
 Register Olist Parquet datasets as Hive tables for Superset visualization.
 
-Connects to the running Spark ThriftServer and creates external tables
-pointing to HDFS Parquet files.
+Registers:
+  - raw tables under database `olist`
+  - star schema tables under database `olist_star`
 
-Superset connection URI: hive://spark-thriftserver:10000/olist
+Superset URI (raw):  hive://spark-thriftserver:10000/olist
+Superset URI (star): hive://spark-thriftserver:10000/olist_star
 
-Usage (from host, ThriftServer must be running):
+Usage:
   python visualization/register_tables.py
-
-Or via beeline inside Docker:
-  docker exec spark-thriftserver /spark/bin/beeline -u 'jdbc:hive2://localhost:10000' -f /app/visualization/register_tables.sql
 """
 
 import os
@@ -18,9 +17,9 @@ import subprocess
 import sys
 
 HDFS_OUTPUT = os.environ.get("HDFS_OUTPUT", "hdfs://namenode:9000/olist")
-DATABASE = "olist"
+HDFS_STAR = os.environ.get("HDFS_STAR", "hdfs://namenode:9000/olist/star")
 
-TABLES = [
+RAW_TABLES = [
     "customers",
     "geolocation",
     "order_items",
@@ -32,33 +31,59 @@ TABLES = [
     "category_translation",
 ]
 
+STAR_TABLES = [
+    "dim_customer",
+    "dim_seller",
+    "dim_product",
+    "dim_date",
+    "dim_geolocation",
+    "fact_orders",
+    "fact_sales",
+    "fact_payments",
+    "fact_reviews",
+]
+
 
 def build_sql() -> str:
-    statements = [f"CREATE DATABASE IF NOT EXISTS {DATABASE};", f"USE {DATABASE};"]
-    for table in TABLES:
+    statements = [
+        "CREATE DATABASE IF NOT EXISTS olist;",
+        "USE olist;",
+    ]
+    for table in RAW_TABLES:
         location = f"{HDFS_OUTPUT}/{table}"
         statements.append(f"DROP TABLE IF EXISTS {table};")
-        statements.append(
-            f"CREATE TABLE {table} USING PARQUET LOCATION '{location}';"
-        )
-    statements.append("SHOW TABLES;")
+        statements.append(f"CREATE TABLE {table} USING PARQUET LOCATION '{location}';")
+
+    statements += [
+        "CREATE DATABASE IF NOT EXISTS olist_star;",
+        "USE olist_star;",
+    ]
+    for table in STAR_TABLES:
+        location = f"{HDFS_STAR}/{table}"
+        statements.append(f"DROP TABLE IF EXISTS {table};")
+        statements.append(f"CREATE TABLE {table} USING PARQUET LOCATION '{location}';")
+
+    statements.append("SHOW TABLES IN olist;")
+    statements.append("SHOW TABLES IN olist_star;")
     return "\n".join(statements)
 
 
 def register_via_beeline() -> None:
-    """Register tables using beeline inside the spark-thriftserver container."""
     sql = build_sql()
-    sql_file = "/tmp/register_tables.sql"
     local_sql = "visualization/register_tables.sql"
 
     with open(local_sql, "w") as f:
         f.write(sql)
 
     cmd = [
-        "docker", "exec", "spark-thriftserver",
+        "docker",
+        "exec",
+        "spark-thriftserver",
         "/spark/bin/beeline",
-        "-u", "jdbc:hive2://localhost:10000",
-        "-f", "/app/visualization/register_tables.sql",
+        "-u",
+        "jdbc:hive2://localhost:10000",
+        "-f",
+        "/app/visualization/register_tables.sql",
     ]
     print("Registering tables via beeline...")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -67,8 +92,9 @@ def register_via_beeline() -> None:
         print(result.stderr, file=sys.stderr)
         sys.exit(result.returncode)
 
-    print(f"\n✅ {len(TABLES)} tables registered in '{DATABASE}' database.")
-    print("   Superset URI: hive://localhost:10000/olist")
+    print(f"\n✅ Raw tables registered in 'olist' ({len(RAW_TABLES)}).")
+    print(f"✅ Star tables registered in 'olist_star' ({len(STAR_TABLES)}).")
+    print("   Superset URI: hive://spark-thriftserver:10000/olist_star")
 
 
 if __name__ == "__main__":

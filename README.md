@@ -93,3 +93,30 @@ docker compose -f docker/docker-compose-superset.yml down
 docker compose -f docker/docker-compose-spark.yml down
 docker compose -f docker/docker-compose-hdfs.yml down
 ```
+
+---
+
+## Our implementation (Phase 1 + Building Data Pipeline STUDY)
+
+End-to-end:
+
+```bash
+bash scripts/run_pipeline.sh
+```
+
+| Step | Script / artifact |
+|---|---|
+| Download 9 CSVs | `scripts/download_dataset.py` |
+| CSV → Parquet on HDFS | `processing/analysis.py` |
+| Clean + **star schema** | `processing/build_star_schema.py` |
+| Hive register (`olist`, `olist_star`) | `visualization/register_tables.py` |
+| Data quality / dedupe report | `processing/data_quality.py` → `reports/data_quality.md` |
+| 7 business questions (Python) | `processing/business_questions.py` → `reports/business_answers.md` |
+| 7 business questions (SQL) | `sql/business_questions.sql` |
+| STUDY write-up (clean/ELT/dbt/layers/star) | `reports/REPORT.md` |
+
+Architecture after transform:
+
+```
+CSV → Spark → HDFS raw Parquet → Spark star (fact/dim) → Hive → Superset / SQL
+```
