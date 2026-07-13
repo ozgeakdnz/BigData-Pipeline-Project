@@ -1,3 +1,7 @@
+# Secrets / local env (never commit)
+.env
+.env.local
+
 # Downloaded dataset (do not commit)
 data/raw/
 data/*.csv

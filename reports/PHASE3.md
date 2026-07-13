@@ -145,7 +145,9 @@ hive://spark-thriftserver:10000/gold
 bash scripts/setup_network.sh
 docker compose -f docker/docker-compose-hdfs.yml up -d
 docker compose -f docker/docker-compose-spark.yml up -d
-docker compose -f docker/docker-compose-airflow.yml up -d --build
+# Creates .env with Fernet key if missing, then starts Airflow
+bash scripts/run_phase3.sh
+# or: docker compose --env-file .env -f docker/docker-compose-airflow.yml up -d --build
 ```
 
 Open Airflow → trigger DAG **`olist_medallion_pipeline`**.
