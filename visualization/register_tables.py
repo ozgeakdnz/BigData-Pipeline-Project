@@ -70,9 +70,9 @@ def build_sql() -> str:
 
 def register_via_beeline() -> None:
     sql = build_sql()
-    local_sql = "visualization/register_tables.sql"
+    local_sql = os.path.join(os.path.dirname(__file__), "register_tables.sql")
 
-    with open(local_sql, "w") as f:
+    with open(local_sql, "w", encoding="utf-8") as f:
         f.write(sql)
 
     cmd = [

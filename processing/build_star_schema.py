@@ -34,8 +34,7 @@ def read_raw(spark: SparkSession, name: str):
 
 def write_star(df, name: str) -> None:
     path = f"{HDFS_STAR}/{name}"
-    count = df.count()
-    print(f"  WRITE {name} → {path}  ({count:,} rows)")
+    print(f"  WRITE {name} → {path}")
     df.write.mode("overwrite").parquet(path)
 
 

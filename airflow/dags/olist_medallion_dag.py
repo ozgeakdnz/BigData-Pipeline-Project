@@ -41,8 +41,10 @@ with DAG(
     download_dataset = BashOperator(
         task_id="download_dataset",
         bash_command=(
-            f"cd {PROJECT} && python3 scripts/download_dataset.py "
-            "|| echo 'Download skipped or already present'"
+            f"cd {PROJECT} && "
+            "if [ -f data/raw/olist_orders_dataset.csv ]; then "
+            "echo 'Dataset already present'; "
+            "else python3 scripts/download_dataset.py; fi"
         ),
         pool="default_pool",
         cwd=PROJECT,

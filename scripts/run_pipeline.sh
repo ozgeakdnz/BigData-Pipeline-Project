@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run the full Phase 1 pipeline end-to-end.
+# Run the full Phase 1 + Phase 2 pipeline end-to-end.
 set -e
 
 cd "$(dirname "$0")/.."

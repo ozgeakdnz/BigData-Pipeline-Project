@@ -119,7 +119,8 @@ def main() -> None:
         "|---|---:|",
     ]
     for _, r in by_cat.iterrows():
-        cat_name = r["product_category_name_english"] or "(missing)"
+        v = r["product_category_name_english"]
+        cat_name = "(missing)" if pd.isna(v) or v == "" else v
         lines.append(f"| {cat_name} | {r['revenue']:,.2f} |")
     lines.append("")
 
@@ -255,7 +256,8 @@ def main() -> None:
         "|---|---:|",
     ]
     for _, r in rev_cat.iterrows():
-        cat_name = r["product_category_name_english"] or "(missing)"
+        v = r["product_category_name_english"]
+        cat_name = "(missing)" if pd.isna(v) or v == "" else v
         lines.append(f"| {cat_name} | {r['review_score']:.2f} |")
     lines.append("")
 

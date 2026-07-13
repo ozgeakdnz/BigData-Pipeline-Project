@@ -16,6 +16,7 @@ if [ ! -f .env ]; then
   cat > .env <<EOF
 AIRFLOW_FERNET_KEY=${KEY}
 AIRFLOW_WEBSERVER_SECRET_KEY=dev-only-change-me
+AIRFLOW_ADMIN_PASSWORD=admin
 SUPERSET_SECRET_KEY=CHANGE_ME_LOCAL_DEV_ONLY
 EOF
   echo "Wrote .env (not committed to git)"

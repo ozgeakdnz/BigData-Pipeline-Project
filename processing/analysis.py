@@ -63,8 +63,7 @@ def convert_all(spark: SparkSession) -> None:
             .csv(local_path)
         )
 
-        row_count = df.count()
-        print(f"  WRITE {table_name} → {hdfs_path}  ({row_count:,} rows)")
+        print(f"  WRITE {table_name} → {hdfs_path}")
         df.write.mode("overwrite").parquet(hdfs_path)
 
     print("\n✅ All tables converted to Parquet on HDFS.")
