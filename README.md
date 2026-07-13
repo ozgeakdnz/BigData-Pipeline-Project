@@ -52,9 +52,70 @@ No advanced transformations are required for this phase.
 
 ---
 
-### 🔜 Phase 2 — Coming Soon
+### ✅ Phase 2 — Building Data Pipeline
+From a business perspective, the driving incentive for creating data pipelines is to design a system to transform their most valuable asset –raw data –into actionable information
 
-Details will be announced.
+<img width="737" height="883" alt="image" src="https://github.com/user-attachments/assets/6b6e5f56-0825-49bf-b53f-2007ad6d423b" />
+
+
+| File | Rows | Description |
+|---|---|---|
+| olist_orders_dataset.csv | ~100k | Order lifecycle: timestamps, status |
+| olist_order_items_dataset.csv | ~112k | Items: product, seller, price, freight |
+| olist_order_payments_dataset.csv | ~104k | Payment type, installments, value |
+| olist_order_reviews_dataset.csv | ~100k | Review score (1–5) and comment |
+| olist_customers_dataset.csv | ~100k | Customer city, state, zip code |
+| olist_sellers_dataset.csv | ~3k | Seller city, state, zip code |
+| olist_products_dataset.csv | ~33k | Category, dimensions, weight |
+| olist_geolocation_dataset.csv | ~1M | ZIP code → lat/lng |
+| product_category_name_translation.csv | ~71 | Portuguese → English category names |
+
+
+STUDY:
+- Is data clean? Explain what clean data means? any duplicate entities in it? if so de-duplicate.
+- Based on given input data above, what should our output look like to reply the business questions below? Reason about it.
+- ETL or ELT approach you adopted to transform the data, why? Learn more about dbt and explain.
+- Explain the layers and / or the logic in your architecture.
+- Create star schema(s), explain fact & dimension tables and how they can respond the questions
+- Python / sql or both you can use, up to you:
+
+
+
+| Business Question | Fact Table | Dimensions |
+|---|---|---|
+| Monthly revenue | | |
+| Revenue by product category | | |
+| Top-performing sellers | | |
+| Sales by customer state | | |
+| Average delivery time by state | | |
+| Payment method trends | | |
+| Average review score by category | | |
+
+---
+
+### ✅ Phase 3 — Re-Construct The Data Pipeline
+**Phase 3 will focus on two main objectives:**
+1. Integrate Apache Airflow as an orchestrator to automate, schedule, and monitor data pipeline jobs:
+2. Implement dbt (Data Build Tool) to handle data transformations and establish a Medallion Architecture.
+
+<img width="1060" height="418" alt="image" src="https://github.com/user-attachments/assets/ad57ffb8-bd0e-42b9-93e1-32e949547abd" />
+
+**STUDY:**
+1. Explain Apache Airflow core components with 1 sentence
+2. Automate data ingestion and dbt (star schema) transformations with Airflow:
+- Build your DAG,
+- Provide a walk-through explaining your architectural decisions.
+- Define explicit boundaries, operator choices, and resource configurations for each task within the workflow.
+4. Migrate and re-build your existing star schema into a dbt (Data Build Tool) project.
+- You will restructure the data pipeline into a multi-layered Medallion Architecture (Bronze, Silver, Gold) to enforce clean data boundaries, improve data quality, and modularize your transformations.
+- Depict it in a diagram or visualize it as you wish. Explore the benefits of the architecture.
+5. Explain the challenging parts of this reconstruction.
+
+
+
+
+
+
 
 ---
 
